@@ -86,8 +86,8 @@ class AutoTTLStats extends Minz_ModelPdo
     {
         $sql = <<<SQL
 SELECT
-	CASE WHEN COUNT(1) > 0 THEN ((MAX(stats.date) - MIN(stats.date)) / COUNT(1)) ELSE 0 END AS `avgTTL`,
-	MAX(stats.date) AS date_max
+	CASE WHEN COUNT(1) > 0 THEN ((MAX(stats.lastSeen) - MIN(stats.lastSeen)) / COUNT(1)) ELSE 0 END AS `avgTTL`,
+	MAX(stats.lastSeen) AS date_max
 FROM `_entry` AS stats
 WHERE id_feed = {$feedID}
 SQL;
@@ -113,8 +113,8 @@ SELECT
 	feed.name,
 	feed.`lastUpdate`,
 	feed.ttl,
-	CASE WHEN COUNT(1) > 0 THEN ((MAX(stats.date) - MIN(stats.date)) / COUNT(1)) ELSE 0 END AS `avgTTL`,
-	MAX(stats.date) AS date_max
+	CASE WHEN COUNT(1) > 0 THEN ((MAX(stats.lastSeen) - MIN(stats.lastSeen)) / COUNT(1)) ELSE 0 END AS `avgTTL`,
+	MAX(stats.lastSeen) AS date_max
 FROM `_feed` AS feed
 LEFT JOIN `_entry` AS stats ON feed.id = stats.id_feed
 WHERE {$where}
