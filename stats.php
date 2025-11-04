@@ -73,9 +73,9 @@ class AutoTTLStats extends Minz_ModelPdo
             return $this->defaultTTL;
         }
 
-        if ($avgTTL === 0 || $avgTTL > $this->maxTTL || $timeSinceLastEntry > 2 * $this->maxTTL) {
+        if ($avgTTL > $this->maxTTL || $timeSinceLastEntry > 2 * $this->maxTTL) {
             return $this->maxTTL;
-        } elseif ($avgTTL < $this->defaultTTL) {
+        } elseif ($avgTTL === 0 || $avgTTL < $this->defaultTTL) {
             return $this->defaultTTL;
         }
 
