@@ -7,11 +7,15 @@ class AutoTTLExtension extends Minz_Extension
     // Defaults
     private const MAX_TTL = 24 * 60 * 60; // 1 day
 
+    private const MIN_TTL = 30 * 60;      // 30 minutes default
+
     private const STATS_COUNT = 100;
 
     public int $defaultTTL;
 
     public int $maxTTL;
+
+    public int $minTTL;
 
     public int $statsCount;
 
@@ -38,6 +42,10 @@ class AutoTTLExtension extends Minz_Extension
             FreshRSS_Context::userConf()->_attribute('auto_ttl_max_ttl', self::MAX_TTL);
         }
 
+        if (!FreshRSS_Context::userConf()->hasParam('auto_ttl_min_ttl')) {
+            FreshRSS_Context::userConf()->_attribute('auto_ttl_min_ttl', self::MIN_TTL);
+        }
+
         if (!FreshRSS_Context::userConf()->hasParam('auto_ttl_stats_count')) {
             FreshRSS_Context::userConf()->_attribute('auto_ttl_stats_count', self::STATS_COUNT);
         }
@@ -46,6 +54,7 @@ class AutoTTLExtension extends Minz_Extension
 
         $this->defaultTTL = FreshRSS_Context::userConf()->attributeInt('ttl_default');
         $this->maxTTL = FreshRSS_Context::userConf()->attributeInt('auto_ttl_max_ttl');
+        $this->minTTL = FreshRSS_Context::userConf()->attributeInt('auto_ttl_min_ttl');
         $this->statsCount = FreshRSS_Context::userConf()->attributeInt('auto_ttl_stats_count');
     }
 
@@ -58,6 +67,7 @@ class AutoTTLExtension extends Minz_Extension
 
         if (Minz_Request::isPost()) {
             FreshRSS_Context::userConf()->_attribute('auto_ttl_max_ttl', Minz_Request::paramInt('auto_ttl_max_ttl'));
+            FreshRSS_Context::userConf()->_attribute('auto_ttl_min_ttl', Minz_Request::paramInt('auto_ttl_min_ttl'));
             FreshRSS_Context::userConf()->_attribute('auto_ttl_stats_count', Minz_Request::paramInt('auto_ttl_stats_count'));
             FreshRSS_Context::userConf()->save();
         }
@@ -66,7 +76,7 @@ class AutoTTLExtension extends Minz_Extension
     public function getStats(): AutoTTLStats
     {
         if ($this->stats === null) {
-            $this->stats = new AutoTTLStats($this->defaultTTL, $this->maxTTL, $this->statsCount);
+            $this->stats = new AutoTTLStats($this->defaultTTL, $this->maxTTL, $this->statsCount, $this->minTTL);
         }
 
         return $this->stats;
@@ -111,7 +121,7 @@ class AutoTTLExtension extends Minz_Extension
                     $ttl,
                 )
             );
-
+            
             return null;
         }
 
