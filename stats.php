@@ -120,8 +120,8 @@ SELECT
 	feed.name,
 	feed.`lastUpdate`,
 	feed.ttl,
-CASE WHEN COUNT(1) > 0 THEN ((MAX(stats.$field) - MIN(stats.$field)) / COUNT(1)) ELSE 0 END AS `avgTTL`,
-MAX(stats.$field) AS date_max
+    CASE WHEN COUNT(1) > 0 THEN ((MAX(stats.$field) - MIN(stats.$field)) / COUNT(1)) ELSE 0 END AS `avgTTL`,
+    MAX(stats.$field) AS date_max
 FROM `_feed` AS feed
 LEFT JOIN `_entry` AS stats ON feed.id = stats.id_feed
 WHERE {$where}
