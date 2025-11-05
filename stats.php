@@ -13,7 +13,7 @@ class StatItem
     public int $avgTTL;
 
     public int $dateMax;
-
+    
     private int $maxTTL;
 
     public function __construct(array $feed, int $maxTTL)
@@ -25,6 +25,7 @@ class StatItem
         $this->avgTTL = (int) $feed['avgTTL'];
         $this->dateMax = (int) $feed['date_max'];
         $this->maxTTL = $maxTTL;
+        $this->minTTL = $minTTL;
     }
 
     public function isActive(int $now): bool
@@ -56,13 +57,19 @@ class AutoTTLStats extends Minz_ModelPdo
      */
     private $statsCount;
 
-    public function __construct(int $defaultTTL, int $maxTTL, int $statsCount)
+    /**
+     * @var int
+     */
+    private $minTTL;
+
+    public function __construct(int $defaultTTL, int $maxTTL, int $statsCount, int $minTTL)
     {
         parent::__construct();
 
         $this->defaultTTL = $defaultTTL;
         $this->maxTTL = $maxTTL;
         $this->statsCount = $statsCount;
+        $this->minTTL = $minTTL;
     }
 
     public function calcAdjustedTTL(int $avgTTL, int $dateMax): int
@@ -73,10 +80,12 @@ class AutoTTLStats extends Minz_ModelPdo
             return $this->defaultTTL;
         }
 
-        if ($avgTTL === 0 || $avgTTL > $this->maxTTL || $timeSinceLastEntry > 2 * $this->maxTTL) {
+        if ($avgTTL > $this->maxTTL || $timeSinceLastEntry > 2 * $this->maxTTL) {
             return $this->maxTTL;
-        } elseif ($avgTTL < $this->defaultTTL) {
+        } elseif ($avgTTL === 0 ) {
             return $this->defaultTTL;
+        } elseif ($avgTTL < $this->minTTL) {
+            return $this->minTTL;
         }
 
         return $avgTTL;
@@ -86,8 +95,8 @@ class AutoTTLStats extends Minz_ModelPdo
     {
         $sql = <<<SQL
 SELECT
-	CASE WHEN COUNT(1) > 0 THEN ((MAX(stats.date) - MIN(stats.date)) / COUNT(1)) ELSE 0 END AS `avgTTL`,
-	MAX(stats.date) AS date_max
+    CASE WHEN COUNT(1) > 0 THEN ((MAX(stats.lastSeen) - MIN(stats.lastSeen)) / COUNT(1)) ELSE 0 END AS `avgTTL`,
+    MAX(stats.lastSeen) AS date_max
 FROM `_entry` AS stats
 WHERE id_feed = {$feedID}
 SQL;
@@ -109,12 +118,12 @@ SQL;
 
         $sql = <<<SQL
 SELECT
-	feed.id,
-	feed.name,
-	feed.`lastUpdate`,
-	feed.ttl,
-	CASE WHEN COUNT(1) > 0 THEN ((MAX(stats.date) - MIN(stats.date)) / COUNT(1)) ELSE 0 END AS `avgTTL`,
-	MAX(stats.date) AS date_max
+    feed.id,
+    feed.name,
+    feed.`lastUpdate`,
+    feed.ttl,
+    CASE WHEN COUNT(1) > 0 THEN ((MAX(stats.lastSeen) - MIN(stats.lastSeen)) / COUNT(1)) ELSE 0 END AS `avgTTL`,
+    MAX(stats.lastSeen) AS date_max
 FROM `_feed` AS feed
 LEFT JOIN `_entry` AS stats ON feed.id = stats.id_feed
 WHERE {$where}
