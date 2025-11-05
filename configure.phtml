@@ -93,8 +93,8 @@
 		<label class="group-name" for="auto_ttl_avg_source">Average TTL field</label>
 	<div class="group-controls">
 		<select class="w50" name="auto_ttl_avg_source" id="auto_ttl_avg_source">
-			<option value="lastSeen" <?= ($this->avgSource === 'lastSeen') ? 'selected' : '' ?>>lastSeen</option>
-			<option value="date" <?= ($this->avgSource === 'date') ? 'selected' : '' ?>>date</option>
+			<option value="lastSeen" <?= ($this->avgSource === 'lastSeen') ? 'selected' : '' ?>>Received date</option>
+			<option value="date" <?= ($this->avgSource === 'date') ? 'selected' : '' ?>>Publication date</option>
 		</select>
 	</div>
 		<label class="group-name" for="auto_ttl_stats_count">Statistics table rows</label>
