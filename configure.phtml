@@ -45,7 +45,6 @@
 				} ?>
 			</select>
 		</div>
-
 		<!-- 新增 Min TTL 选项 -->
 		<label class="group-name" for="auto_ttl_min_ttl">Min TTL</label>
 		<div class="group-controls">
@@ -91,7 +90,13 @@
 				} ?>
 			</select>
 		</div>
-
+		<label class="group-name" for="auto_ttl_avg_source">Average TTL field</label>
+	<div class="group-controls">
+		<select class="w50" name="auto_ttl_avg_source" id="auto_ttl_avg_source">
+			<option value="lastSeen" <?= ($this->avgSource === 'lastSeen') ? 'selected' : '' ?>>Received date</option>
+			<option value="date" <?= ($this->avgSource === 'date') ? 'selected' : '' ?>>Publication date</option>
+		</select>
+	</div>
 		<label class="group-name" for="auto_ttl_stats_count">Statistics table rows</label>
 		<div class="group-controls">
 			<input type="number" min="1" value="<?php echo $this->statsCount; ?>" class="w50" name="auto_ttl_stats_count" id="auto_ttl_stats_count" required="required" />
