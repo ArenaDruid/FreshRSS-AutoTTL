@@ -25,6 +25,7 @@ class StatItem
         $this->avgTTL = (int) $feed['avgTTL'];
         $this->dateMax = (int) $feed['date_max'];
         $this->maxTTL = $maxTTL;
+        $this->minTTL = $minTTL;
     }
 
     public function isActive(int $now): bool
@@ -59,7 +60,7 @@ class AutoTTLStats extends Minz_ModelPdo
     /**
      * @var int
      */
-    private $maxTTL;
+    private $minTTL;
 
     public function __construct(int $defaultTTL, int $maxTTL, int $statsCount, int $minTTL)
     {
