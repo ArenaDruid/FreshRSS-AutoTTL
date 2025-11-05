@@ -11,7 +11,7 @@ class AutoTTLExtension extends Minz_Extension
 
     private const STATS_COUNT = 100;
 
-    private const AVG_SOURCE = 'lastSeen'; // 默认模式
+    private const AVG_SOURCE = 'date'; // 默认模式
 
     public int $defaultTTL;
 

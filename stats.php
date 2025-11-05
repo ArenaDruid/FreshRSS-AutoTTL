@@ -66,7 +66,7 @@ class AutoTTLStats extends Minz_ModelPdo
      */
     private string $avgSource;
 
-    public function __construct(int $defaultTTL, int $maxTTL, int $statsCount, int $minTTL, string $avgSource = 'lastSeen')
+    public function __construct(int $defaultTTL, int $maxTTL, int $statsCount, int $minTTL, string $avgSource)
     {
         parent::__construct();
 
