@@ -66,15 +66,46 @@ class AutoTTLStats extends Minz_ModelPdo
      */
     private string $avgSource;
 
-    public function __construct(int $defaultTTL, int $maxTTL, int $statsCount, int $minTTL, string $avgSource)
+    public function __construct(int $defaultTTL, int $maxTTL, int $statsCount, int $minTTL, string $avgSource = 'lastSeen')
     {
         parent::__construct();
-
         $this->defaultTTL = $defaultTTL;
         $this->maxTTL = $maxTTL;
         $this->statsCount = $statsCount;
         $this->minTTL = $minTTL;
         $this->avgSource = $avgSource;
+    }
+
+    // ✅ 新增：鲁棒平均周期计算
+    private function computeAvgTTL(array $timestamps): int
+    {
+        if (count($timestamps) < 2) {
+            return $this->defaultTTL;
+        }
+
+        rsort($timestamps);
+
+        $diffs = [];
+        for ($i = 0; $i < count($timestamps) - 1; $i++) {
+            $diffs[] = $timestamps[$i] - $timestamps[$i + 1];
+        }
+
+        sort($diffs);
+
+        $trim = floor(count($diffs) * 0.1);
+        if ($trim > 0) {
+            $diffs = array_slice($diffs, $trim, -$trim);
+        }
+
+        $mid = floor(count($diffs) / 2);
+        $median = (count($diffs) % 2 === 0)
+            ? ($diffs[$mid - 1] + $diffs[$mid]) / 2
+            : $diffs[$mid];
+
+        if ($median < $this->minTTL) return $this->minTTL;
+        if ($median > $this->maxTTL) return $this->maxTTL;
+
+        return (int)$median;
     }
 
     public function calcAdjustedTTL(int $avgTTL, int $dateMax): int
@@ -100,17 +131,19 @@ class AutoTTLStats extends Minz_ModelPdo
     {
         $field = ($this->avgSource === 'date') ? 'date' : 'lastSeen';
         $sql = <<<SQL
-SELECT
-    CASE WHEN COUNT(1) > 0 THEN ((MAX(stats.$field) - MIN(stats.$field)) / COUNT(1)) ELSE 0 END AS `avgTTL`,
-    MAX(stats.$field) AS date_max
+SELECT stats.$field AS t
 FROM `_entry` AS stats
 WHERE id_feed = {$feedID}
+ORDER BY stats.$field DESC
+LIMIT {$this->statsCount}
 SQL;
 
         $stm = $this->pdo->query($sql);
-        $res = $stm->fetch(PDO::FETCH_NAMED);
+        $rows = $stm->fetchAll(PDO::FETCH_COLUMN);
 
-        return $this->calcAdjustedTTL((int) $res['avgTTL'], (int) $res['date_max']);
+        $avg = $this->computeAvgTTL(array_map('intval', $rows));
+
+        return $this->calcAdjustedTTL($avg, (int)max($rows));
     }
 
     public function getFeedStats(bool $autoTTL): array
