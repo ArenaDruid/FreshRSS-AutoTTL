@@ -13,7 +13,7 @@ class StatItem
     public int $avgTTL;
 
     public int $dateMax;
-    
+
     private int $maxTTL;
 
     public function __construct(array $feed, int $maxTTL)
@@ -37,6 +37,23 @@ class StatItem
 
         return true;
     }
+
+    public function status(int $now): string
+    {
+        // 获取 active/idle
+        $active = $this->isActive($now);
+
+        // 读取 burst session
+        $session = Minz_Session::param('autottl_burst', []);
+        $burst = isset($session[$this->id]) && $session[$this->id]['burst'] === true;
+
+        // 优先判断 burst
+        if ($burst) {
+            return 'burst';
+        }
+        return $active ? 'active' : 'idle';
+    }
+
 }
 
 class AutoTTLStats extends Minz_ModelPdo
@@ -66,6 +83,10 @@ class AutoTTLStats extends Minz_ModelPdo
      */
     private string $avgSource;
 
+    // burst 参数
+    private int $burstThreshold = 15; // 触发爆发阈值
+    private int $burstMaxMiss = 3;    // 连续 miss 上限
+
     public function __construct(int $defaultTTL, int $maxTTL, int $statsCount, int $minTTL, string $avgSource = 'lastSeen')
     {
         parent::__construct();
@@ -76,7 +97,6 @@ class AutoTTLStats extends Minz_ModelPdo
         $this->avgSource = $avgSource;
     }
 
-    // ✅ 新增：鲁棒平均周期计算
     private function computeAvgTTL(array $timestamps): int
     {
         if (count($timestamps) < 2) {
@@ -127,6 +147,54 @@ class AutoTTLStats extends Minz_ModelPdo
         return $avgTTL;
     }
 
+    // ============ Burst 模式核心逻辑（固定使用 lastSeen） ============
+    private function handleBurst(int $feedID): bool
+    {
+        // 固定字段 lastSeen —— 与 avgSource 解耦
+        $sql = <<<SQL
+SELECT stats.lastSeen AS t
+FROM `_entry` AS stats
+WHERE id_feed = {$feedID}
+ORDER BY stats.lastSeen DESC
+LIMIT {$this->statsCount}
+SQL;
+
+        $stm = $this->pdo->query($sql);
+        $rows = $stm->fetchAll(PDO::FETCH_COLUMN);
+        $rows = array_map('intval', $rows);
+
+        // 新增条目数量 = 最新窗口大小
+        $newItems = count($rows);
+
+        $session = Minz_Session::param('autottl_burst', []);
+
+        if (!isset($session[$feedID])) {
+            $session[$feedID] = [
+                'burst' => false,
+                'miss'  => 0
+            ];
+        }
+
+        // 如果有大爆发，重置 miss，进入 burst
+        if ($newItems > $this->burstThreshold) {
+            $session[$feedID]['burst'] = true;
+            $session[$feedID]['miss']  = 0;
+        } else {
+            // 如果在 burst 状态却本次没内容 → miss++
+            if ($session[$feedID]['burst']) {
+                $session[$feedID]['miss']++;
+                // 连续 miss 达标 → 退出 burst
+                if ($session[$feedID]['miss'] >= $this->burstMaxMiss) {
+                    $session[$feedID]['burst'] = false;
+                    $session[$feedID]['miss']  = 0;
+                }
+            }
+        }
+
+        Minz_Session::_param('autottl_burst', $session);
+        return $session[$feedID]['burst'];
+    }
+
     public function getAdjustedTTL(int $feedID): int
     {
         $field = ($this->avgSource === 'date') ? 'date' : 'lastSeen';
@@ -140,8 +208,17 @@ SQL;
 
         $stm = $this->pdo->query($sql);
         $rows = $stm->fetchAll(PDO::FETCH_COLUMN);
+        $rows = array_map('intval', $rows);
 
-        $avg = $this->computeAvgTTL(array_map('intval', $rows));
+        $avg = $this->computeAvgTTL($rows);
+
+        // 计算本次新增条目数（当前 max timestamp - 上次 max timestamp）
+        $newItems = count($rows);
+
+        // Burst 检测
+        if ($this->handleBurst($feedID, $newItems)) {
+            return $this->minTTL;
+        }
 
         return $this->calcAdjustedTTL($avg, (int)max($rows));
     }

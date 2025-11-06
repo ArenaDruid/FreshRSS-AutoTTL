@@ -137,7 +137,7 @@ $now = time();
 				<?= ($feed->avgTTL > 0) ? $this->getStats()->humanIntervalFromSeconds($feed->avgTTL) : 'no items' ?>
 			</td>
 			<td>
-				<?= $feed->isActive($now) ? 'active' : 'idle' ?>
+				<?= $feed->status($now) ?>
 			</td>
 			<td>
 				<?= $this->getStats()->humanIntervalFromSeconds($adjustedTTL) ?>
