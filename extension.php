@@ -7,6 +7,8 @@ class AutoTTLExtension extends Minz_Extension
     // Defaults
     private const MAX_TTL = 24 * 60 * 60; // 1 day
 
+    private const AVG_SOURCE = 'date'; //Publication date
+
     private const STATS_COUNT = 100;
 
     public int $defaultTTL;
@@ -14,6 +16,8 @@ class AutoTTLExtension extends Minz_Extension
     public int $maxTTL;
 
     public int $statsCount;
+
+    public string $avgSource;
 
     /**
      * @var AutoTTLStats
@@ -42,11 +46,16 @@ class AutoTTLExtension extends Minz_Extension
             FreshRSS_Context::userConf()->_attribute('auto_ttl_stats_count', self::STATS_COUNT);
         }
 
+        if (!FreshRSS_Context::userConf()->hasParam('auto_ttl_avg_source')) {
+            FreshRSS_Context::userConf()->_attribute('auto_ttl_avg_source', self::AVG_SOURCE);
+        }
+
         FreshRSS_Context::userConf()->save();
 
         $this->defaultTTL = FreshRSS_Context::userConf()->attributeInt('ttl_default');
         $this->maxTTL = FreshRSS_Context::userConf()->attributeInt('auto_ttl_max_ttl');
         $this->statsCount = FreshRSS_Context::userConf()->attributeInt('auto_ttl_stats_count');
+        $this->avgSource = FreshRSS_Context::userConf()->attributeString('auto_ttl_avg_source');
     }
 
     /*
@@ -59,6 +68,7 @@ class AutoTTLExtension extends Minz_Extension
         if (Minz_Request::isPost()) {
             FreshRSS_Context::userConf()->_attribute('auto_ttl_max_ttl', Minz_Request::paramInt('auto_ttl_max_ttl'));
             FreshRSS_Context::userConf()->_attribute('auto_ttl_stats_count', Minz_Request::paramInt('auto_ttl_stats_count'));
+            FreshRSS_Context::userConf()->_attribute('auto_ttl_avg_source', Minz_Request::paramString('auto_ttl_avg_source'));
             FreshRSS_Context::userConf()->save();
         }
     }
@@ -66,7 +76,7 @@ class AutoTTLExtension extends Minz_Extension
     public function getStats(): AutoTTLStats
     {
         if ($this->stats === null) {
-            $this->stats = new AutoTTLStats($this->defaultTTL, $this->maxTTL, $this->statsCount);
+            $this->stats = new AutoTTLStats($this->defaultTTL, $this->maxTTL, $this->statsCount, $this->avgSource);
         }
 
         return $this->stats;
