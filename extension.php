@@ -29,7 +29,12 @@ class AutoTTLExtension extends Minz_Extension
             'feedBeforeActualizeHook',
         ]);
         $this->registerTranslates();
-        $this->initConfig();
+        // 延迟初始化配置，只在有用户上下文时执行
+        if (FreshRSS_Context::hasUserConf()) {
+            $this->initConfig();
+        } else {
+            Minz_Log::warning('AutoTTL: skipped initConfig - no user context');
+        }
     }
 
     private function initConfig()
@@ -74,27 +79,27 @@ class AutoTTLExtension extends Minz_Extension
 
     public function feedBeforeActualizeHook(FreshRSS_Feed $feed)
     {
-        if ($feed->lastUpdate() === 0) {
-            Minz_Log::debug(
-                sprintf(
-                    'AutoTTL: feed %d (%s) never updated, updating now',
-                    $feed->id(),
-                    $feed->name(),
-                )
-            );
+        // 防止在无用户上下文（CLI 或 AJAX 初始化阶段）执行数据库访问
+        if (!FreshRSS_Context::hasUserConf()) {
+            Minz_Log::warning('AutoTTL: Skipped feedBeforeActualizeHook - no user context');
+            return $feed;
+        }
 
+        if ($feed->lastUpdate() === 0) {
+            Minz_Log::debug(sprintf(
+                'AutoTTL: feed %d (%s) never updated, updating now',
+                $feed->id(),
+                $feed->name(),
+            ));
             return $feed;
         }
 
         if ($feed->ttl() !== FreshRSS_Feed::TTL_DEFAULT) {
-            Minz_Log::debug(
-                sprintf(
-                    'AutoTTL: feed %d (%s) not using default TTL, updating now',
-                    $feed->id(),
-                    $feed->name(),
-                )
-            );
-
+            Minz_Log::debug(sprintf(
+                'AutoTTL: feed %d (%s) not using default TTL, updating now',
+                $feed->id(),
+                $feed->name(),
+            ));
             return $feed;
         }
 
@@ -102,28 +107,23 @@ class AutoTTLExtension extends Minz_Extension
         $ttl = $this->getStats()->getAdjustedTTL($feed->id());
 
         if ($timeSinceLastUpdate < $ttl) {
-            Minz_Log::debug(
-                sprintf(
-                    'AutoTTL: skip feed %d (%s, last update %s): adjusted TTL (%ds) not exceeded yet',
-                    $feed->id(),
-                    $feed->name(),
-                    date('r', $feed->lastUpdate()),
-                    $ttl,
-                )
-            );
-
-            return null;
-        }
-
-        Minz_Log::debug(
-            sprintf(
-                'AutoTTL: updating feed %d (%s, last update %s, adjusted TTL %ds)',
+            Minz_Log::debug(sprintf(
+                'AutoTTL: skip feed %d (%s, last update %s): adjusted TTL (%ds) not exceeded yet',
                 $feed->id(),
                 $feed->name(),
                 date('r', $feed->lastUpdate()),
                 $ttl,
-            )
-        );
+            ));
+            return null;
+        }
+
+        Minz_Log::debug(sprintf(
+            'AutoTTL: updating feed %d (%s, last update %s, adjusted TTL %ds)',
+            $feed->id(),
+            $feed->name(),
+            date('r', $feed->lastUpdate()),
+            $ttl,
+        ));
 
         return $feed;
     }
