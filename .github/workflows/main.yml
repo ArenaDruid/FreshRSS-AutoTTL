@@ -18,7 +18,10 @@ jobs:
       # Step 1: run a standard checkout action
       - name: Checkout target repo
         uses: actions/checkout@v3
-
+        with:
+          fetch-depth: 0        # 拉取完整历史
+          ref: dev              # 检出 dev（workflow 所在分支）
+          
       # Step 2: run the sync action
       - name: Sync upstream changes
         id: sync
