@@ -68,6 +68,7 @@ class AutoTTLStats extends Minz_ModelPdo
         $this->defaultTTL = $defaultTTL;
         $this->maxTTL = $maxTTL;
         $this->statsCount = $statsCount;
+        $this->avgSource = $avgSource;
     }
 
     public function calcAdjustedTTL(int $avgTTL, int $dateMax): int
@@ -186,3 +187,4 @@ SQL;
         return implode(' ', $results);
     }
 }
+        
