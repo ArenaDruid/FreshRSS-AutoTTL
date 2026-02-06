@@ -109,7 +109,7 @@ SELECT
     CASE WHEN COUNT(1) > 0 THEN ((MAX(stats.lastSeen) - MIN(stats.lastSeen)) / COUNT(1)) ELSE 0 END AS `avgTTL`,
     MAX(stats.lastSeen) AS `date_max`
 FROM `_entry` AS stats
-WHERE id_feed = {$feedID}
+WHERE id_feed = {$feedID} AND lastSeen > {$this->getStatsCutoff()}
 SQL;
         $stm = $this->pdo->query($sqlLastSeen);
         $res = $stm->fetch(PDO::FETCH_NAMED);
@@ -176,7 +176,11 @@ SELECT
     CASE WHEN COUNT(1) > 0 THEN ((MAX(stats.lastSeen) - MIN(stats.lastSeen)) / COUNT(1)) ELSE 0 END AS `avgTTL`,
     MAX(stats.lastSeen) AS date_max
 FROM `_feed` AS feed
-LEFT JOIN `_entry` AS stats ON feed.id = stats.id_feed
+LEFT JOIN (
+    SELECT id_feed, lastSeen
+    FROM `_entry`
+    WHERE lastSeen > {$this->getStatsCutoff()}
+) AS stats ON feed.id = stats.id_feed
 WHERE {$where}
 GROUP BY feed.id
 SQL;
