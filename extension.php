@@ -33,29 +33,10 @@ class AutoTTLExtension extends Minz_Extension
             'feedBeforeActualizeHook',
         ]);
         $this->registerTranslates();
-        $this->initConfig();
-    }
-
-    private function initConfig()
-    {
-        if (!FreshRSS_Context::userConf()->hasParam('auto_ttl_max_ttl')) {
-            FreshRSS_Context::userConf()->_attribute('auto_ttl_max_ttl', self::MAX_TTL);
-        }
-
-        if (!FreshRSS_Context::userConf()->hasParam('auto_ttl_stats_count')) {
-            FreshRSS_Context::userConf()->_attribute('auto_ttl_stats_count', self::STATS_COUNT);
-        }
-
-        if (!FreshRSS_Context::userConf()->hasParam('auto_ttl_avg_source')) {
-            FreshRSS_Context::userConf()->_attribute('auto_ttl_avg_source', self::AVG_SOURCE);
-        }
-
-        FreshRSS_Context::userConf()->save();
-
-        $this->defaultTTL = FreshRSS_Context::userConf()->attributeInt('ttl_default');
-        $this->maxTTL = FreshRSS_Context::userConf()->attributeInt('auto_ttl_max_ttl');
-        $this->statsCount = FreshRSS_Context::userConf()->attributeInt('auto_ttl_stats_count');
-        $this->avgSource = FreshRSS_Context::userConf()->attributeString('auto_ttl_avg_source');
+        $this->defaultTTL = FreshRSS_Context::userConf()->attributeInt('ttl_default') ?? FreshRSS_Feed::TTL_DEFAULT;
+        $this->maxTTL = FreshRSS_Context::userConf()->attributeInt('auto_ttl_max_ttl') ?? self::MAX_TTL;
+        $this->statsCount = FreshRSS_Context::userConf()->attributeInt('auto_ttl_stats_count') ?? self::STATS_COUNT;
+        $this->avgSource = FreshRSS_Context::userConf()->attributeString('auto_ttl_avg_source') ?? self::AVG_SOURCE;
     }
 
     /*
